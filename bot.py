@@ -143,7 +143,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
     
-    await update.message.reply_text(
+    help_text = (
         "⚠️ Admin Requirements:\n"
         "- Make me admin in both group and channel\n"
         "- Grant me 'Restrict users' permission in group\n\n"
@@ -151,8 +151,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start - Introduction\n"
         "/help - This message\n"
         "/fsub [@channel|ID|reply] - Set required channel\n"
-        "/disconnect - Stop forcing subscription\n\n"
-        "I'll mute anyone who hasn't joined the required channel for 5 minutes.",
+        "/disconnect - Stop forcing subscription\n"
+        "/setdelay [seconds] - Set unmute delay (0 or ≥30 allowed)\n"
+        "/getdelay - Show current unmute delay\n\n"
+        "I'll mute anyone who hasn't joined the required channel for 5 minutes."
+    )
+    
+    await update.message.reply_text(
+        help_text,
         reply_markup=reply_markup
     )
 
@@ -203,7 +209,11 @@ async def save_fsub_channel(chat_id: int, channel: str, update: Update, context:
         
         fsub_collection.update_one(
             {'chat_id': chat_id},
-            {'$set': {'channel': channel, 'channel_id': chat.id}},
+            {'$set': {
+                'channel': channel, 
+                'channel_id': chat.id,
+                'unmute_delay': 0  # Default unmute delay is 0 seconds
+            }},
             upsert=True
         )
         
@@ -266,6 +276,93 @@ async def disconnect_fsub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ Failed to disable force subscription. Please try again.")
 
+async def set_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    user = update.effective_user
+    
+    if chat.type == 'private':
+        await update.message.reply_text("This command only works in groups.")
+        return
+    
+    member = await chat.get_member(user.id)
+    if member.status not in ['administrator', 'creator']:
+        await update.message.reply_text("❌ Only admins can use this command.")
+        return
+    
+    # Check if fsub is already set for this group
+    fsub_data = fsub_collection.find_one({'chat_id': chat.id})
+    if not fsub_data:
+        await update.message.reply_text("❌ Force subscription is not set for this group. Use /fsub first.")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            "Usage: /setdelay [seconds]\n"
+            "Example: /setdelay 0 - Immediate unmute (default)\n"
+            "Example: /setdelay 30 - Users muted for 30 seconds\n"
+            "Example: /setdelay 60 - Users muted for 1 minute\n\n"
+            "⚠️ Only 0 or numbers ≥30 are allowed!"
+        )
+        return
+    
+    try:
+        delay = int(context.args[0])
+        
+        # ALLOW 0 OR NUMBERS ≥30
+        if delay != 0 and delay < 30:
+            await update.message.reply_text(
+                "❌ Only 0 or numbers ≥30 are allowed!\n"
+                "Please choose 0 (immediate) or a number ≥30 (e.g., 30, 45, 60)."
+            )
+            return
+        
+        # Update the unmute delay in database
+        fsub_collection.update_one(
+            {'chat_id': chat.id},
+            {'$set': {'unmute_delay': delay}}
+        )
+        
+        if delay == 0:
+            await update.message.reply_text(
+                "✅ Unmute delay set to 0 seconds. Users will be unmuted immediately after clicking 'Unmute Me'."
+            )
+        else:
+            await update.message.reply_text(
+                f"✅ Unmute delay set to {delay} seconds. Users will be muted for {delay} seconds after clicking 'Unmute Me'."
+            )
+    except ValueError:
+        await update.message.reply_text("❌ Invalid number. Please provide a valid number of seconds.")
+
+async def get_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    
+    if chat.type == 'private':
+        await update.message.reply_text("This command only works in groups.")
+        return
+    
+    # Check if fsub is already set for this group
+    fsub_data = fsub_collection.find_one({'chat_id': chat.id})
+    if not fsub_data:
+        await update.message.reply_text("❌ Force subscription is not set for this group.")
+        return
+    
+    delay = fsub_data.get('unmute_delay', 0)
+    
+    if delay == 0:
+        await update.message.reply_text(
+            "Current unmute delay: 0 seconds (immediate unmute)\n\n"
+            "Users will be unmuted immediately after clicking 'Unmute Me'.\n"
+            "To change this, use /setdelay [seconds]\n\n"
+            "⚠️ Only 0 or numbers ≥30 are allowed!"
+        )
+    else:
+        await update.message.reply_text(
+            f"Current unmute delay: {delay} seconds\n\n"
+            f"Users will be muted for {delay} seconds after clicking 'Unmute Me'.\n"
+            "To change this, use /setdelay [seconds]\n\n"
+            "⚠️ Only 0 or numbers ≥30 are allowed!"
+        )
+
 async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.forward_from_chat and update.message.forward_from_chat.type == 'channel':
         return
@@ -275,6 +372,16 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if chat.type == 'private' or user.is_bot:
         return
+    
+    # Check if message is recent (within 10 seconds)
+    message_date = update.message.date
+    if message_date:
+        message_time = message_date.timestamp()
+        current_time = time.time()
+        
+        # Only process messages from the last 10 seconds
+        if current_time - message_time > 10:
+            return
     
     fsub_data = fsub_collection.find_one({'chat_id': chat.id})
     if not fsub_data:
@@ -322,7 +429,10 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 can_send_voice_notes=False,
                 can_send_polls=False,
                 can_send_other_messages=False,
-                can_add_web_page_previews=False
+                can_add_web_page_previews=False,
+                can_invite_users=False,
+                can_change_info=False,
+                can_pin_messages=False
             )
             
             try:
@@ -424,7 +534,6 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     data = query.data.split(':')
     if len(data) != 3 or data[0] != 'unmute':
-        await query.edit_message_text("⚠️ Invalid request. Please try again later.")
         return
     
     chat_id = int(data[1])
@@ -465,41 +574,152 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        chat = await context.bot.get_chat(chat_id)
+        # Get unmute delay from database (default is 0)
+        unmute_delay = fsub_data.get('unmute_delay', 0)
         
-        permissions = ChatPermissions(
-            can_send_messages=True,
-            can_send_audios=True,
-            can_send_documents=True,
-            can_send_photos=True,
-            can_send_videos=True,
-            can_send_video_notes=True,
-            can_send_voice_notes=True,
-            can_send_polls=True,
-            can_send_other_messages=True,
-            can_add_web_page_previews=True
-        )
+        # Delete the warning message (mute message)
+        try:
+            await query.message.delete()
+        except Exception as delete_error:
+            logger.error(f"Error deleting mute message: {delete_error}")
         
-        await chat.restrict_member(user_id, permissions)
+        # Delete previous warnings from context data
+        if 'user_warnings' in context.chat_data and user_id in context.chat_data['user_warnings']:
+            del context.chat_data['user_warnings'][user_id]
         
-        await delete_previous_warnings(chat_id, user_id, context)
+        if unmute_delay > 0:
+            # Mute user for the configured delay (≥30 seconds)
+            permissions = ChatPermissions(
+                can_send_messages=False,
+                can_send_audios=False,
+                can_send_documents=False,
+                can_send_photos=False,
+                can_send_videos=False,
+                can_send_video_notes=False,
+                can_send_voice_notes=False,
+                can_send_polls=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False,
+                can_invite_users=False,
+                can_change_info=False,
+                can_pin_messages=False
+            )
+            
+            # Set mute for the configured delay (≥30 seconds)
+            until_date = datetime.now() + timedelta(seconds=unmute_delay)
+            
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=permissions,
+                until_date=until_date
+            )
+            
+            # Schedule unmute after the delay
+            context.job_queue.run_once(
+                callback=complete_unmute_after_delay,
+                when=unmute_delay,
+                data={
+                    'chat_id': chat_id,
+                    'user_id': user_id
+                }
+            )
+        else:
+            # Immediate unmute (delay = 0)
+            await complete_unmute_immediately(chat_id, user_id, context)
         
-        await query.edit_message_text(
-            f"✅ {query.from_user.mention_html()} has been unmuted!",
-            parse_mode='HTML'
-        )
-        
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"✅ {query.from_user.mention_html()} has been unmuted after verifying channel membership.",
-            parse_mode='HTML'
-        )
     except Exception as e:
-        logger.error(f"Error unmuting user: {e}")
+        logger.error(f"Error in unmute process: {e}")
         await query.answer(
-            "⚠️ Failed to unmute. Please contact an admin.",
+            "⚠️ Failed to process unmute request. Please contact an admin.",
             show_alert=True
         )
+
+async def complete_unmute_immediately(chat_id, user_id, context):
+    """Immediately unmute the user (for delay = 0)"""
+    try:
+        # Get the chat to check its permissions
+        chat = await context.bot.get_chat(chat_id)
+        
+        if chat.permissions:
+            # Use group's default permissions
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=chat.permissions,
+                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+            )
+        else:
+            # Grant all standard permissions
+            permissions = ChatPermissions(
+                can_send_messages=True,
+                can_send_audios=True,
+                can_send_documents=True,
+                can_send_photos=True,
+                can_send_videos=True,
+                can_send_video_notes=True,
+                can_send_voice_notes=True,
+                can_send_polls=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False
+            )
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=permissions,
+                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+            )
+            
+    except Exception as e:
+        logger.error(f"Error unmuting user immediately: {e}")
+
+async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
+    """Complete unmute after delay"""
+    job_data = context.job.data
+    chat_id = job_data['chat_id']
+    user_id = job_data['user_id']
+    
+    try:
+        # Get the chat to check its permissions
+        chat = await context.bot.get_chat(chat_id)
+        
+        if chat.permissions:
+            # Use group's default permissions
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=chat.permissions,
+                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+            )
+        else:
+            # Grant all standard permissions
+            permissions = ChatPermissions(
+                can_send_messages=True,
+                can_send_audios=True,
+                can_send_documents=True,
+                can_send_photos=True,
+                can_send_videos=True,
+                can_send_video_notes=True,
+                can_send_voice_notes=True,
+                can_send_polls=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False
+            )
+            await context.bot.restrict_chat_member(
+                chat_id=chat_id,
+                user_id=user_id,
+                permissions=permissions,
+                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+            )
+            
+    except Exception as e:
+        logger.error(f"Error unmuting user after delay: {e}")
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_user.id) != os.getenv('OWNER_ID'):
@@ -675,6 +895,8 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("fsub", set_fsub_channel))
     application.add_handler(CommandHandler("disconnect", disconnect_fsub))
+    application.add_handler(CommandHandler("setdelay", set_unmute_delay))
+    application.add_handler(CommandHandler("getdelay", get_unmute_delay))
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("broadcast", broadcast_command))
     application.add_handler(
