@@ -122,7 +122,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "1. Add me to your group as admin\n"
         "2. Use `/fsub @channel` to set requirements\n"
         "3. I'll handle the rest!\n\n"
-        "Click the buttons below to add me to your groups/channels:"
+        "Click the buttons below to add me to your groups/channels.\n"
+        "Try `/colors` to see all button styles, or `/example` for an aiogram-style demo!"
     )
 
     if update.effective_chat.type == 'private':
@@ -161,7 +162,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/fsub [@channel|ID|reply] - Set required channel\n"
         "/disconnect - Stop forcing subscription\n"
         "/setdelay [seconds] - Set unmute delay (0 or ≥30 allowed)\n"
-        "/getdelay - Show current unmute delay\n\n"
+        "/getdelay - Show current unmute delay\n"
+        "/colors - Demo of colorful inline buttons\n"
+        "/example - Aiogram-style colored buttons (red, green, blue)\n\n"
         "I'll mute anyone who hasn't joined the required channel for 5 minutes."
     )
     
@@ -169,6 +172,64 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text,
         reply_markup=reply_markup
     )
+
+async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Demo all button colors"""
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Success (green)", callback_data="color_success", color='success'),
+            InlineKeyboardButton("❌ Danger (red)", callback_data="color_danger", color='danger')
+        ],
+        [
+            InlineKeyboardButton("🔵 Primary (blue)", callback_data="color_primary", color='primary'),
+            InlineKeyboardButton("⚪ Gray (default)", callback_data="color_gray")  # no color
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "🎨 *Button Color Demo*\n\n"
+        "• `color='success'` → Green\n"
+        "• `color='danger'` → Red\n"
+        "• `color='primary'` → Blue\n"
+        "• No `color` parameter → Gray",
+        parse_mode='Markdown',
+        reply_markup=reply_markup
+    )
+
+async def example_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a message with red, green, and blue buttons (aiogram example replica)."""
+    keyboard = [
+        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", color='danger')],
+        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", color='success')],
+        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", color='primary')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Choose an action (aiogram style):", reply_markup=reply_markup)
+
+async def color_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the color demo callbacks"""
+    query = update.callback_query
+    await query.answer()
+    color_map = {
+        "color_success": "success (green)",
+        "color_danger": "danger (red)",
+        "color_primary": "primary (blue)",
+        "color_gray": "gray (default)"
+    }
+    color_name = color_map.get(query.data, "unknown")
+    await query.edit_message_text(f"You clicked the **{color_name}** button!", parse_mode='Markdown')
+
+async def example_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the aiogram example callbacks"""
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    responses = {
+        "delete": "🗑 Delete action triggered!",
+        "confirm": "✅ Order confirmed!",
+        "update": "🔄 Profile update initiated!"
+    }
+    await query.edit_message_text(responses.get(data, f"Unknown action: {data}"))
 
 async def set_fsub_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -903,18 +964,27 @@ def main():
     
     application = ApplicationBuilder().token(os.getenv('BOT_TOKEN')).build()
     
+    # Command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("colors", colors_command))
+    application.add_handler(CommandHandler("example", example_command))  # NEW aiogram-style
     application.add_handler(CommandHandler("fsub", set_fsub_channel))
     application.add_handler(CommandHandler("disconnect", disconnect_fsub))
     application.add_handler(CommandHandler("setdelay", set_unmute_delay))
     application.add_handler(CommandHandler("getdelay", get_unmute_delay))
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("broadcast", broadcast_command))
+    
+    # Message handler for membership checks
     application.add_handler(
         MessageHandler(filters.ChatType.GROUPS & ~filters.StatusUpdate.ALL, check_membership)
     )
+    
+    # Callback query handlers
     application.add_handler(CallbackQueryHandler(unmute_button, pattern=r"^unmute:"))
+    application.add_handler(CallbackQueryHandler(color_callback_handler, pattern=r"^color_"))
+    application.add_handler(CallbackQueryHandler(example_callback, pattern="^(delete|confirm|update)$"))  # NEW
     application.add_handler(CallbackQueryHandler(broadcast_target_callback, pattern=r"^bcast_target:"))
     application.add_handler(CallbackQueryHandler(broadcast_pin_callback, pattern=r"^bcast_pin:"))
     
