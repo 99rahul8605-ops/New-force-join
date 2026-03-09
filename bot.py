@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Print PTB version for debugging
-print(f"🔍 Running python-telegram-bot version: {telegram.__version__}")
+print(f"🔍 python-telegram-bot version: {telegram.__version__}")
 
 # Set up logging
 logging.basicConfig(
@@ -84,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             upsert=True
         )
     
-    # Blue buttons for main actions
+    # Colored buttons using api_kwargs
     keyboard = [
         [
             InlineKeyboardButton(
@@ -100,13 +100,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # Support channel button – now blue (primary)
     if os.getenv('SUPPORT_CHANNEL'):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                api_kwargs={'style': 'primary'}
+                api_kwargs={'style': 'primary'}   # <-- changed to blue
             )
         ])
     
@@ -148,7 +147,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                api_kwargs={'style': 'primary'}  # now blue
+                api_kwargs={'style': 'primary'}   # <-- changed to blue
             )
         ])
     
@@ -199,7 +198,7 @@ async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "⚪ Gray (default)", 
                 callback_data="color_gray"
-                # no style → gray
+                # no style
             )
         ]
     ]
@@ -248,8 +247,6 @@ async def example_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "update": "🔄 Profile update initiated!"
     }
     await query.edit_message_text(responses.get(data, f"Unknown action: {data}"))
-
-# ==================== Force Subscription Functions ====================
 
 async def set_fsub_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -301,7 +298,7 @@ async def save_fsub_channel(chat_id: int, channel: str, update: Update, context:
             {'$set': {
                 'channel': channel, 
                 'channel_id': chat.id,
-                'unmute_delay': 0  # Default unmute delay is 0 seconds
+                'unmute_delay': 0
             }},
             upsert=True
         )
@@ -347,15 +344,12 @@ async def disconnect_fsub(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Only admins can use this command.")
         return
     
-    # Check if fsub is already set for this group
     fsub_data = fsub_collection.find_one({'chat_id': chat.id})
     if not fsub_data:
         await update.message.reply_text("❌ No forced subscription is currently active in this group.")
         return
     
-    # Remove the fsub entry from database
     result = fsub_collection.delete_one({'chat_id': chat.id})
-    
     if result.deleted_count > 0:
         await update.message.reply_text(
             "✅ Force subscription has been disabled for this group.\n\n"
@@ -378,7 +372,6 @@ async def set_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Only admins can use this command.")
         return
     
-    # Check if fsub is already set for this group
     fsub_data = fsub_collection.find_one({'chat_id': chat.id})
     if not fsub_data:
         await update.message.reply_text("❌ Force subscription is not set for this group. Use /fsub first.")
@@ -396,8 +389,6 @@ async def set_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         delay = int(context.args[0])
-        
-        # ALLOW 0 OR NUMBERS ≥30
         if delay != 0 and delay < 30:
             await update.message.reply_text(
                 "❌ Only 0 or numbers ≥30 are allowed!\n"
@@ -405,7 +396,6 @@ async def set_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        # Update the unmute delay in database
         fsub_collection.update_one(
             {'chat_id': chat.id},
             {'$set': {'unmute_delay': delay}}
@@ -429,7 +419,6 @@ async def get_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("This command only works in groups.")
         return
     
-    # Check if fsub is already set for this group
     fsub_data = fsub_collection.find_one({'chat_id': chat.id})
     if not fsub_data:
         await update.message.reply_text("❌ Force subscription is not set for this group.")
@@ -453,8 +442,7 @@ async def get_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Skip if message is forwarded from a channel
-    if update.message and update.message.forward_from_chat and update.message.forward_from_chat.type == 'channel':
+    if update.message and update.message.forward_origin and update.message.forward_origin.type == 'channel':
         return
     
     chat = update.effective_chat
@@ -463,13 +451,10 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat.type == 'private' or user.is_bot:
         return
     
-    # Check if message is recent (within 10 seconds)
     message_date = update.message.date
     if message_date:
         message_time = message_date.timestamp()
         current_time = time.time()
-        
-        # Only process messages from the last 10 seconds
         if current_time - message_time > 10:
             return
     
@@ -486,7 +471,6 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         target_chat = channel_id if channel_id else (f"@{channel}" if channel and not channel.startswith('-') else channel)
-        
         if not target_chat:
             logger.warning(f"No valid channel identifier found for chat {chat.id}")
             return
@@ -538,13 +522,11 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await delete_previous_warnings(chat.id, user.id, context)
                 
                 keyboard = []
-                
-                # Unmute button – green (success)
                 keyboard.append([
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        api_kwargs={'style': 'success'}
+                        api_kwargs={'style': 'success'}   # <-- changed to green
                     )
                 ])
                 
@@ -569,7 +551,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
                             url=f"https://t.me/{channel}",
-                            api_kwargs={'style': 'primary'}  # now blue
+                            api_kwargs={'style': 'primary'}   # <-- changed to blue
                         )
                     ])
                 elif invite_link:
@@ -577,7 +559,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
                             url=invite_link,
-                            api_kwargs={'style': 'primary'}  # now blue
+                            api_kwargs={'style': 'primary'}   # <-- changed to blue
                         )
                     ])
                 
@@ -645,9 +627,7 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         channel = fsub_data.get('channel')
         channel_id = fsub_data.get('channel_id')
-        
         target_chat = channel_id if channel_id else (f"@{channel}" if channel and not channel.startswith('-') else channel)
-        
         if not target_chat:
             await query.answer("❌ Configuration error. Please contact admin.", show_alert=True)
             return
@@ -668,21 +648,17 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        # Get unmute delay from database (default is 0)
         unmute_delay = fsub_data.get('unmute_delay', 0)
         
-        # Delete the warning message (mute message)
         try:
             await query.message.delete()
         except Exception as delete_error:
             logger.error(f"Error deleting mute message: {delete_error}")
         
-        # Delete previous warnings from context data
         if 'user_warnings' in context.chat_data and user_id in context.chat_data['user_warnings']:
             del context.chat_data['user_warnings'][user_id]
         
         if unmute_delay > 0:
-            # Mute user for the configured delay (≥30 seconds)
             permissions = ChatPermissions(
                 can_send_messages=False,
                 can_send_audios=False,
@@ -698,28 +674,19 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 can_change_info=False,
                 can_pin_messages=False
             )
-            
-            # Set mute for the configured delay (≥30 seconds)
             until_date = datetime.now() + timedelta(seconds=unmute_delay)
-            
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=permissions,
                 until_date=until_date
             )
-            
-            # Schedule unmute after the delay
             context.job_queue.run_once(
                 callback=complete_unmute_after_delay,
                 when=unmute_delay,
-                data={
-                    'chat_id': chat_id,
-                    'user_id': user_id
-                }
+                data={'chat_id': chat_id, 'user_id': user_id}
             )
         else:
-            # Immediate unmute (delay = 0)
             await complete_unmute_immediately(chat_id, user_id, context)
         
     except Exception as e:
@@ -730,21 +697,16 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def complete_unmute_immediately(chat_id, user_id, context):
-    """Immediately unmute the user (for delay = 0)"""
     try:
-        # Get the chat to check its permissions
         chat = await context.bot.get_chat(chat_id)
-        
         if chat.permissions:
-            # Use group's default permissions
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=chat.permissions,
-                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+                until_date=datetime.now() + timedelta(seconds=1)
             )
         else:
-            # Grant all standard permissions
             permissions = ChatPermissions(
                 can_send_messages=True,
                 can_send_audios=True,
@@ -764,32 +726,25 @@ async def complete_unmute_immediately(chat_id, user_id, context):
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=permissions,
-                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+                until_date=datetime.now() + timedelta(seconds=1)
             )
-            
     except Exception as e:
         logger.error(f"Error unmuting user immediately: {e}")
 
 async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
-    """Complete unmute after delay"""
     job_data = context.job.data
     chat_id = job_data['chat_id']
     user_id = job_data['user_id']
-    
     try:
-        # Get the chat to check its permissions
         chat = await context.bot.get_chat(chat_id)
-        
         if chat.permissions:
-            # Use group's default permissions
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=chat.permissions,
-                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+                until_date=datetime.now() + timedelta(seconds=1)
             )
         else:
-            # Grant all standard permissions
             permissions = ChatPermissions(
                 can_send_messages=True,
                 can_send_audios=True,
@@ -809,9 +764,8 @@ async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=permissions,
-                until_date=datetime.now() + timedelta(seconds=1)  # Set to 1 second in future
+                until_date=datetime.now() + timedelta(seconds=1)
             )
-            
     except Exception as e:
         logger.error(f"Error unmuting user after delay: {e}")
 
@@ -822,7 +776,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     uptime_seconds = time.time() - BOT_START_TIME
     uptime = str(timedelta(seconds=int(uptime_seconds)))
-    
     groups_count = fsub_collection.count_documents({})
     users_count = user_collection.count_documents({})
     bot_info = await context.bot.get_me()
@@ -875,16 +828,14 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     target = query.data.split(':')[1]
     context.user_data['broadcast_target'] = target
     
     keyboard = [
         [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", api_kwargs={'style': 'primary'})],
-        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]   # no style → gray
+        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(
         "📌 Pin message in groups?",
         reply_markup=reply_markup
@@ -893,7 +844,6 @@ async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAUL
 async def broadcast_pin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     pin_option = query.data.split(':')[1]
     context.user_data['broadcast_pin'] = pin_option
     
@@ -905,11 +855,9 @@ async def broadcast_pin_callback(update: Update, context: ContextTypes.DEFAULT_T
     del context.user_data['broadcast_pin']
     
     recipients = []
-    
     if target in ['groups', 'both']:
         groups = fsub_collection.distinct("chat_id")
         recipients.extend([('group', gid) for gid in groups])
-    
     if target in ['users', 'both']:
         users = user_collection.distinct("user_id")
         recipients.extend([('user', uid) for uid in users])
@@ -936,7 +884,6 @@ async def broadcast_pin_callback(update: Update, context: ContextTypes.DEFAULT_T
                 from_chat_id=msg_info['chat_id'],
                 message_id=msg_info['message_id']
             )
-            
             if recipient_type == 'group' and pin_option == 'yes':
                 try:
                     await context.bot.pin_chat_message(
@@ -945,7 +892,6 @@ async def broadcast_pin_callback(update: Update, context: ContextTypes.DEFAULT_T
                     )
                 except Exception as pin_error:
                     logger.error(f"Pin failed in {recipient_id}: {pin_error}")
-            
             successful += 1
         except Exception as e:
             logger.error(f"Broadcast failed to {recipient_type} {recipient_id}: {e}")
@@ -969,7 +915,6 @@ async def broadcast_pin_callback(update: Update, context: ContextTypes.DEFAULT_T
         f"• Successful: {successful}\n"
         f"• Failed: {failed}"
     )
-    
     if failed > 0:
         report_text += f"\n\n❌ Failed IDs:\n{', '.join(map(str, failed_ids[:10]))}"
         if failed > 10:
@@ -997,12 +942,12 @@ def main():
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("broadcast", broadcast_command))
     
-    # Message handler for membership checks
+    # Message handler
     application.add_handler(
         MessageHandler(filters.ChatType.GROUPS & ~filters.StatusUpdate.ALL, check_membership)
     )
     
-    # Callback query handlers
+    # Callback handlers
     application.add_handler(CallbackQueryHandler(unmute_button, pattern=r"^unmute:"))
     application.add_handler(CallbackQueryHandler(color_callback_handler, pattern=r"^color_"))
     application.add_handler(CallbackQueryHandler(example_callback, pattern="^(delete|confirm|update)$"))
