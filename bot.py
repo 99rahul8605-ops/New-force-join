@@ -20,9 +20,8 @@ from telegram.ext import (
 from dotenv import load_dotenv
 load_dotenv()
 
-# Print PTB version and Bot API version for debugging
+# Print PTB version for debugging
 print(f"🔍 python-telegram-bot version: {telegram.__version__}")
-print(f"🔍 Bot API version: {telegram.constants.BOT_API_VERSION}")  # Should be 9.4+
 
 # Set up logging
 logging.basicConfig(
@@ -85,17 +84,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             upsert=True
         )
     
+    # Buttons using official 'style' parameter via api_kwargs
     keyboard = [
         [
             InlineKeyboardButton(
                 "➕ Add to Group", 
                 url=f"https://t.me/{context.bot.username}?startgroup=true",
-                color='primary'                     # blue
+                **{"style": "primary"}   # blue
             ),
             InlineKeyboardButton(
                 "➕ Add to Channel", 
                 url=f"https://t.me/{context.bot.username}?startchannel=true",
-                color='primary'                      # blue
+                **{"style": "primary"}   # blue
             )
         ]
     ]
@@ -105,7 +105,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
-                # no color → gray (default)
+                # no style → gray (default)
             )
         ])
     
@@ -124,7 +124,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "2. Use `/fsub @channel` to set requirements\n"
         "3. I'll handle the rest!\n\n"
         "Click the buttons below to add me to your groups/channels.\n"
-        "Try `/colors` to see all button styles, or `/example` for an aiogram-style demo!"
+        "Try `/colors` to see all button styles, or `/example` for a demo!"
     )
 
     if update.effective_chat.type == 'private':
@@ -147,7 +147,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
-                # no color → gray
+                # no style → gray
             )
         ])
     
@@ -165,7 +165,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/setdelay [seconds] - Set unmute delay (0 or ≥30 allowed)\n"
         "/getdelay - Show current unmute delay\n"
         "/colors - Demo of colorful inline buttons\n"
-        "/example - Aiogram-style colored buttons (red, green, blue)\n\n"
+        "/example - Colored buttons demo (red, green, blue)\n\n"
         "I'll mute anyone who hasn't joined the required channel for 5 minutes."
     )
     
@@ -175,37 +175,53 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Demo all button colors"""
+    """Demo all button styles"""
     keyboard = [
         [
-            InlineKeyboardButton("✅ Success (green)", callback_data="color_success", color='success'),
-            InlineKeyboardButton("❌ Danger (red)", callback_data="color_danger", color='danger')
+            InlineKeyboardButton(
+                "✅ Success (green)", 
+                callback_data="color_success", 
+                **{"style": "success"}
+            ),
+            InlineKeyboardButton(
+                "❌ Danger (red)", 
+                callback_data="color_danger", 
+                **{"style": "danger"}
+            )
         ],
         [
-            InlineKeyboardButton("🔵 Primary (blue)", callback_data="color_primary", color='primary'),
-            InlineKeyboardButton("⚪ Gray (default)", callback_data="color_gray")  # no color
+            InlineKeyboardButton(
+                "🔵 Primary (blue)", 
+                callback_data="color_primary", 
+                **{"style": "primary"}
+            ),
+            InlineKeyboardButton(
+                "⚪ Gray (default)", 
+                callback_data="color_gray"
+                # no style
+            )
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "🎨 *Button Color Demo*\n\n"
-        "• `color='success'` → Green\n"
-        "• `color='danger'` → Red\n"
-        "• `color='primary'` → Blue\n"
-        "• No `color` parameter → Gray",
+        "🎨 *Button Style Demo*\n\n"
+        "• `style='success'` → Green\n"
+        "• `style='danger'` → Red\n"
+        "• `style='primary'` → Blue\n"
+        "• No `style` parameter → Gray",
         parse_mode='Markdown',
         reply_markup=reply_markup
     )
 
 async def example_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a message with red, green, and blue buttons (aiogram example replica)."""
+    """Send a message with red, green, and blue buttons."""
     keyboard = [
-        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", color='danger')],
-        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", color='success')],
-        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", color='primary')]
+        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", **{"style": "danger"})],
+        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", **{"style": "success"})],
+        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", **{"style": "primary"})]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Choose an action (aiogram style):", reply_markup=reply_markup)
+    await update.message.reply_text("Choose an action:", reply_markup=reply_markup)
 
 async def color_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the color demo callbacks"""
@@ -217,11 +233,11 @@ async def color_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         "color_primary": "primary (blue)",
         "color_gray": "gray (default)"
     }
-    color_name = color_map.get(query.data, "unknown")
-    await query.edit_message_text(f"You clicked the **{color_name}** button!", parse_mode='Markdown')
+    style_name = color_map.get(query.data, "unknown")
+    await query.edit_message_text(f"You clicked the **{style_name}** button!", parse_mode='Markdown')
 
 async def example_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the aiogram example callbacks"""
+    """Handle the example callbacks"""
     query = update.callback_query
     await query.answer()
     data = query.data
@@ -520,11 +536,12 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 keyboard = []
                 
+                # Unmute button – blue (primary)
                 keyboard.append([
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        color='primary'                          # blue button
+                        **{"style": "primary"}
                     )
                 ])
                 
@@ -549,7 +566,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
                             url=f"https://t.me/{channel}"
-                            # no color → gray
+                            # no style → gray
                         )
                     ])
                 elif invite_link:
@@ -557,7 +574,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
                             url=invite_link
-                            # no color → gray
+                            # no style → gray
                         )
                     ])
                 
@@ -841,9 +858,9 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [
-        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups", color='primary')],
-        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users", color='primary')],
-        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both", color='primary')]
+        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups", **{"style": "primary"})],
+        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users", **{"style": "primary"})],
+        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both", **{"style": "primary"})]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -860,8 +877,8 @@ async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAUL
     context.user_data['broadcast_target'] = target
     
     keyboard = [
-        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", color='primary')],
-        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]   # no color → gray
+        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", **{"style": "primary"})],
+        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]   # no style → gray
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
