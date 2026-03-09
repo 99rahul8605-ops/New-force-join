@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Print PTB version for debugging (remove after confirming)
-print("python-telegram-bot version:", telegram.__version__)
+print("🔍 python-telegram-bot version:", telegram.__version__)
 
 # Set up logging
 logging.basicConfig(
@@ -372,7 +372,8 @@ async def get_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message and update.message.forward_from_chat and update.message.forward_from_chat.type == 'channel':
+    # Skip if message is forwarded from a channel
+    if update.message and update.message.forward_origin and update.message.forward_origin.type == 'channel':
         return
     
     chat = update.effective_chat
