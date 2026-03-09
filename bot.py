@@ -84,11 +84,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton(
                 "➕ Add to Group", 
-                url=f"https://t.me/{context.bot.username}?startgroup=true"
+                url=f"https://t.me/{context.bot.username}?startgroup=true",
+                color='primary'                     # 👈 colorful button
             ),
             InlineKeyboardButton(
                 "➕ Add to Channel", 
-                url=f"https://t.me/{context.bot.username}?startchannel=true"
+                url=f"https://t.me/{context.bot.username}?startchannel=true",
+                color='primary'                      # 👈 colorful button
             )
         ]
     ]
@@ -97,7 +99,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
+                color='secondary'                    # 👈 gray button
             )
         ])
     
@@ -137,7 +140,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
+                color='secondary'                    # 👈 gray button
             )
         ])
     
@@ -452,7 +456,8 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append([
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
-                        callback_data=f"unmute:{chat.id}:{user.id}"
+                        callback_data=f"unmute:{chat.id}:{user.id}",
+                        color='primary'                          # 👈 blue button
                     )
                 ])
                 
@@ -476,14 +481,16 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
-                            url=f"https://t.me/{channel}"
+                            url=f"https://t.me/{channel}",
+                            color='secondary'                     # 👈 gray button
                         )
                     ])
                 elif invite_link:
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
-                            url=invite_link
+                            url=invite_link,
+                            color='secondary'                      # 👈 gray button
                         )
                     ])
                 
@@ -767,9 +774,9 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [
-        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups")],
-        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users")],
-        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both")]
+        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups", color='primary')],
+        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users", color='primary')],
+        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both", color='primary')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -786,8 +793,8 @@ async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAUL
     context.user_data['broadcast_target'] = target
     
     keyboard = [
-        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes")],
-        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]
+        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", color='primary')],
+        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no", color='secondary')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
