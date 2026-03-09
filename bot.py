@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import telegram  # for version check
 from threading import Thread
 from datetime import datetime, timedelta
 from flask import Flask
@@ -18,6 +19,9 @@ from telegram.ext import (
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+
+# Print PTB version for debugging (remove after confirming)
+print("python-telegram-bot version:", telegram.__version__)
 
 # Set up logging
 logging.basicConfig(
@@ -85,12 +89,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "➕ Add to Group", 
                 url=f"https://t.me/{context.bot.username}?startgroup=true",
-                color='primary'                     # 👈 blue button
+                color='primary'                     # blue
             ),
             InlineKeyboardButton(
                 "➕ Add to Channel", 
                 url=f"https://t.me/{context.bot.username}?startchannel=true",
-                color='primary'                      # 👈 blue button
+                color='primary'                      # blue
             )
         ]
     ]
@@ -99,8 +103,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                color='secondary'                    # 👈 gray button
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
+                # no color → gray (default)
             )
         ])
     
@@ -140,8 +144,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                color='secondary'                    # 👈 gray button
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
+                # no color → gray
             )
         ])
     
@@ -457,7 +461,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        color='primary'                          # 👈 blue button
+                        color='primary'                          # blue button
                     )
                 ])
                 
@@ -481,16 +485,16 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
-                            url=f"https://t.me/{channel}",
-                            color='secondary'                     # 👈 gray button
+                            url=f"https://t.me/{channel}"
+                            # no color → gray
                         )
                     ])
                 elif invite_link:
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
-                            url=invite_link,
-                            color='secondary'                      # 👈 gray button
+                            url=invite_link
+                            # no color → gray
                         )
                     ])
                 
@@ -794,7 +798,7 @@ async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAUL
     
     keyboard = [
         [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", color='primary')],
-        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no", color='secondary')]
+        [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]   # no color → gray
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
