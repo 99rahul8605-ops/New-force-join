@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import telegram
 from threading import Thread
 from datetime import datetime, timedelta
 from flask import Flask
@@ -18,6 +19,9 @@ from telegram.ext import (
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+
+# Print PTB version for debugging
+print(f"🔍 Running python-telegram-bot version: {telegram.__version__}")
 
 # Set up logging
 logging.basicConfig(
@@ -80,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             upsert=True
         )
     
-    # Colored buttons using api_kwargs
+    # Blue buttons for main actions
     keyboard = [
         [
             InlineKeyboardButton(
@@ -96,12 +100,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
+    # Support channel button – now blue (primary)
     if os.getenv('SUPPORT_CHANNEL'):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
-                # no style → gray
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
+                api_kwargs={'style': 'primary'}
             )
         ])
     
@@ -142,8 +147,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
             InlineKeyboardButton(
                 "📢 Support Channel", 
-                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}"
-                # no style → gray
+                url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
+                api_kwargs={'style': 'primary'}  # now blue
             )
         ])
     
@@ -243,6 +248,8 @@ async def example_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "update": "🔄 Profile update initiated!"
     }
     await query.edit_message_text(responses.get(data, f"Unknown action: {data}"))
+
+# ==================== Force Subscription Functions ====================
 
 async def set_fsub_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -446,7 +453,7 @@ async def get_unmute_delay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Skip if message is forwarded from a channel (using old attribute)
+    # Skip if message is forwarded from a channel
     if update.message and update.message.forward_from_chat and update.message.forward_from_chat.type == 'channel':
         return
     
@@ -532,12 +539,12 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 keyboard = []
                 
-                # Unmute button – blue (primary)
+                # Unmute button – green (success)
                 keyboard.append([
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        api_kwargs={'style': 'primary'}
+                        api_kwargs={'style': 'success'}
                     )
                 ])
                 
@@ -561,16 +568,16 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
-                            url=f"https://t.me/{channel}"
-                            # no style → gray
+                            url=f"https://t.me/{channel}",
+                            api_kwargs={'style': 'primary'}  # now blue
                         )
                     ])
                 elif invite_link:
                     keyboard.append([
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
-                            url=invite_link
-                            # no style → gray
+                            url=invite_link,
+                            api_kwargs={'style': 'primary'}  # now blue
                         )
                     ])
                 
