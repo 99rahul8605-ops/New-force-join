@@ -20,8 +20,9 @@ from telegram.ext import (
 from dotenv import load_dotenv
 load_dotenv()
 
-# Print PTB version for debugging (remove after confirming)
-print("🔍 python-telegram-bot version:", telegram.__version__)
+# Print PTB version and Bot API version for debugging
+print(f"🔍 python-telegram-bot version: {telegram.__version__}")
+print(f"🔍 Bot API version: {telegram.constants.BOT_API_VERSION}")  # Should be 9.4+
 
 # Set up logging
 logging.basicConfig(
@@ -968,7 +969,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("colors", colors_command))
-    application.add_handler(CommandHandler("example", example_command))  # NEW aiogram-style
+    application.add_handler(CommandHandler("example", example_command))
     application.add_handler(CommandHandler("fsub", set_fsub_channel))
     application.add_handler(CommandHandler("disconnect", disconnect_fsub))
     application.add_handler(CommandHandler("setdelay", set_unmute_delay))
@@ -984,7 +985,7 @@ def main():
     # Callback query handlers
     application.add_handler(CallbackQueryHandler(unmute_button, pattern=r"^unmute:"))
     application.add_handler(CallbackQueryHandler(color_callback_handler, pattern=r"^color_"))
-    application.add_handler(CallbackQueryHandler(example_callback, pattern="^(delete|confirm|update)$"))  # NEW
+    application.add_handler(CallbackQueryHandler(example_callback, pattern="^(delete|confirm|update)$"))
     application.add_handler(CallbackQueryHandler(broadcast_target_callback, pattern=r"^bcast_target:"))
     application.add_handler(CallbackQueryHandler(broadcast_pin_callback, pattern=r"^bcast_pin:"))
     
