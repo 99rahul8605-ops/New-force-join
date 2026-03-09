@@ -85,12 +85,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "➕ Add to Group", 
                 url=f"https://t.me/{context.bot.username}?startgroup=true",
-                color='primary'                     # 👈 colorful button
+                color='primary'                     # 👈 blue button
             ),
             InlineKeyboardButton(
                 "➕ Add to Channel", 
                 url=f"https://t.me/{context.bot.username}?startchannel=true",
-                color='primary'                      # 👈 colorful button
+                color='primary'                      # 👈 blue button
             )
         ]
     ]
