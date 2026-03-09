@@ -105,7 +105,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                api_kwargs={'style': 'primary'}   # <-- changed to blue
+                api_kwargs={'style': 'primary'}   # blue
             )
         ])
     
@@ -123,8 +123,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "1. Add me to your group as admin\n"
         "2. Use `/fsub @channel` to set requirements\n"
         "3. I'll handle the rest!\n\n"
-        "Click the buttons below to add me to your groups/channels.\n"
-        "Try `/colors` to see all button styles, or `/example` for a demo!"
+        "Click the buttons below to add me to your groups/channels."
     )
 
     if update.effective_chat.type == 'private':
@@ -147,7 +146,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📢 Support Channel", 
                 url=f"https://t.me/{os.getenv('SUPPORT_CHANNEL')}",
-                api_kwargs={'style': 'primary'}   # <-- changed to blue
+                api_kwargs={'style': 'primary'}   # blue
             )
         ])
     
@@ -164,8 +163,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/disconnect - Stop forcing subscription\n"
         "/setdelay [seconds] - Set unmute delay (0 or ≥30 allowed)\n"
         "/getdelay - Show current unmute delay\n"
-        "/colors - Demo of colorful inline buttons\n"
-        "/example - Colored buttons demo (red, green, blue)\n\n"
+        "/status - Bot statistics (owner only)\n"
+        "/broadcast - Send message to all groups/users (owner only)\n\n"
         "I'll mute anyone who hasn't joined the required channel for 5 minutes."
     )
     
@@ -173,80 +172,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text,
         reply_markup=reply_markup
     )
-
-async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Demo all button styles"""
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "✅ Success (green)", 
-                callback_data="color_success", 
-                api_kwargs={'style': 'success'}
-            ),
-            InlineKeyboardButton(
-                "❌ Danger (red)", 
-                callback_data="color_danger", 
-                api_kwargs={'style': 'danger'}
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔵 Primary (blue)", 
-                callback_data="color_primary", 
-                api_kwargs={'style': 'primary'}
-            ),
-            InlineKeyboardButton(
-                "⚪ Gray (default)", 
-                callback_data="color_gray"
-                # no style
-            )
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "🎨 *Button Style Demo*\n\n"
-        "• `style='success'` → Green\n"
-        "• `style='danger'` → Red\n"
-        "• `style='primary'` → Blue\n"
-        "• No `style` parameter → Gray",
-        parse_mode='Markdown',
-        reply_markup=reply_markup
-    )
-
-async def example_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a message with red, green, and blue buttons."""
-    keyboard = [
-        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", api_kwargs={'style': 'danger'})],
-        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", api_kwargs={'style': 'success'})],
-        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", api_kwargs={'style': 'primary'})]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Choose an action:", reply_markup=reply_markup)
-
-async def color_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the color demo callbacks"""
-    query = update.callback_query
-    await query.answer()
-    color_map = {
-        "color_success": "success (green)",
-        "color_danger": "danger (red)",
-        "color_primary": "primary (blue)",
-        "color_gray": "gray (default)"
-    }
-    style_name = color_map.get(query.data, "unknown")
-    await query.edit_message_text(f"You clicked the **{style_name}** button!", parse_mode='Markdown')
-
-async def example_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the example callbacks"""
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-    responses = {
-        "delete": "🗑 Delete action triggered!",
-        "confirm": "✅ Order confirmed!",
-        "update": "🔄 Profile update initiated!"
-    }
-    await query.edit_message_text(responses.get(data, f"Unknown action: {data}"))
 
 async def set_fsub_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -526,7 +451,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        api_kwargs={'style': 'success'}   # <-- changed to green
+                        api_kwargs={'style': 'success'}   # green
                     )
                 ])
                 
@@ -551,7 +476,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Channel", 
                             url=f"https://t.me/{channel}",
-                            api_kwargs={'style': 'primary'}   # <-- changed to blue
+                            api_kwargs={'style': 'primary'}   # blue
                         )
                     ])
                 elif invite_link:
@@ -559,7 +484,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         InlineKeyboardButton(
                             "🔗 Join Private Channel", 
                             url=invite_link,
-                            api_kwargs={'style': 'primary'}   # <-- changed to blue
+                            api_kwargs={'style': 'primary'}   # blue
                         )
                     ])
                 
@@ -933,8 +858,6 @@ def main():
     # Command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("colors", colors_command))
-    application.add_handler(CommandHandler("example", example_command))
     application.add_handler(CommandHandler("fsub", set_fsub_channel))
     application.add_handler(CommandHandler("disconnect", disconnect_fsub))
     application.add_handler(CommandHandler("setdelay", set_unmute_delay))
@@ -949,8 +872,6 @@ def main():
     
     # Callback handlers
     application.add_handler(CallbackQueryHandler(unmute_button, pattern=r"^unmute:"))
-    application.add_handler(CallbackQueryHandler(color_callback_handler, pattern=r"^color_"))
-    application.add_handler(CallbackQueryHandler(example_callback, pattern="^(delete|confirm|update)$"))
     application.add_handler(CallbackQueryHandler(broadcast_target_callback, pattern=r"^bcast_target:"))
     application.add_handler(CallbackQueryHandler(broadcast_pin_callback, pattern=r"^bcast_pin:"))
     
