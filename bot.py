@@ -20,8 +20,13 @@ from telegram.ext import (
 from dotenv import load_dotenv
 load_dotenv()
 
-# Print PTB version for debugging
-print(f"🔍 python-telegram-bot version: {telegram.__version__}")
+# Check PTB version – must be ≥20.0 for direct 'style' parameter
+if telegram.__version__ < "20.0":
+    raise RuntimeError(
+        f"Your python-telegram-bot version is {telegram.__version__}, but direct 'style' parameter requires ≥20.0.\n"
+        "Please upgrade: pip install --upgrade python-telegram-bot"
+    )
+print(f"✅ python-telegram-bot version: {telegram.__version__} (OK)")
 
 # Set up logging
 logging.basicConfig(
@@ -84,18 +89,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             upsert=True
         )
     
-    # Colored buttons using api_kwargs
+    # Now using direct 'style' parameter (requires PTB ≥20.0)
     keyboard = [
         [
             InlineKeyboardButton(
                 "➕ Add to Group", 
                 url=f"https://t.me/{context.bot.username}?startgroup=true",
-                api_kwargs={'style': 'primary'}
+                style="primary"
             ),
             InlineKeyboardButton(
                 "➕ Add to Channel", 
                 url=f"https://t.me/{context.bot.username}?startchannel=true",
-                api_kwargs={'style': 'primary'}
+                style="primary"
             )
         ]
     ]
@@ -181,19 +186,19 @@ async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "✅ Success (green)", 
                 callback_data="color_success", 
-                api_kwargs={'style': 'success'}
+                style="success"
             ),
             InlineKeyboardButton(
                 "❌ Danger (red)", 
                 callback_data="color_danger", 
-                api_kwargs={'style': 'danger'}
+                style="danger"
             )
         ],
         [
             InlineKeyboardButton(
                 "🔵 Primary (blue)", 
                 callback_data="color_primary", 
-                api_kwargs={'style': 'primary'}
+                style="primary"
             ),
             InlineKeyboardButton(
                 "⚪ Gray (default)", 
@@ -216,9 +221,9 @@ async def colors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def example_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message with red, green, and blue buttons."""
     keyboard = [
-        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", api_kwargs={'style': 'danger'})],
-        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", api_kwargs={'style': 'success'})],
-        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", api_kwargs={'style': 'primary'})]
+        [InlineKeyboardButton("🗑 Delete Record", callback_data="delete", style="danger")],
+        [InlineKeyboardButton("✅ Confirm Order", callback_data="confirm", style="success")],
+        [InlineKeyboardButton("🔄 Update Profile", callback_data="update", style="primary")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Choose an action:", reply_markup=reply_markup)
@@ -526,7 +531,7 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(
                         "✅ Unmute Me", 
                         callback_data=f"unmute:{chat.id}:{user.id}",
-                        api_kwargs={'style': 'primary'}
+                        style="primary"
                     )
                 ])
                 
@@ -814,9 +819,9 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [
-        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups", api_kwargs={'style': 'primary'})],
-        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users", api_kwargs={'style': 'primary'})],
-        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both", api_kwargs={'style': 'primary'})]
+        [InlineKeyboardButton("📢 Groups Only", callback_data="bcast_target:groups", style="primary")],
+        [InlineKeyboardButton("👤 Users Only", callback_data="bcast_target:users", style="primary")],
+        [InlineKeyboardButton("🌐 Both Groups & Users", callback_data="bcast_target:both", style="primary")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -832,7 +837,7 @@ async def broadcast_target_callback(update: Update, context: ContextTypes.DEFAUL
     context.user_data['broadcast_target'] = target
     
     keyboard = [
-        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", api_kwargs={'style': 'primary'})],
+        [InlineKeyboardButton("📌 Yes", callback_data="bcast_pin:yes", style="primary")],
         [InlineKeyboardButton("❌ No", callback_data="bcast_pin:no")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
