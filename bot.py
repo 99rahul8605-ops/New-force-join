@@ -629,7 +629,7 @@ async def complete_unmute_immediately(chat_id, user_id, context):
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=chat.permissions,
-                until_date=0
+                until_date=datetime.now() + timedelta(seconds=1)
             )
         else:
             permissions = ChatPermissions(
@@ -645,14 +645,13 @@ async def complete_unmute_immediately(chat_id, user_id, context):
                 can_add_web_page_previews=True,
                 can_change_info=False,
                 can_invite_users=True,
-                can_pin_messages=False,
-                can_manage_topics=True
+                can_pin_messages=False
             )
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=permissions,
-                until_date=0
+                until_date=datetime.now() + timedelta(seconds=1)
             )
     except Exception as e:
         logger.error(f"Error unmuting user immediately: {e}")
@@ -668,7 +667,7 @@ async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=chat.permissions,
-                until_date=0
+                until_date=datetime.now() + timedelta(seconds=1)
             )
         else:
             permissions = ChatPermissions(
@@ -684,14 +683,13 @@ async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
                 can_add_web_page_previews=True,
                 can_change_info=False,
                 can_invite_users=True,
-                can_pin_messages=False,
-                can_manage_topics=True
+                can_pin_messages=False
             )
             await context.bot.restrict_chat_member(
                 chat_id=chat_id,
                 user_id=user_id,
                 permissions=permissions,
-                until_date=0
+                until_date=datetime.now() + timedelta(seconds=1)
             )
     except Exception as e:
         logger.error(f"Error unmuting user after delay: {e}")
