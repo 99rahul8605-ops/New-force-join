@@ -623,37 +623,34 @@ async def unmute_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def complete_unmute_immediately(chat_id, user_id, context):
     try:
-        chat = await context.bot.get_chat(chat_id)
-        if chat.permissions:
-            await context.bot.restrict_chat_member(
-                chat_id=chat_id,
-                user_id=user_id,
-                permissions=chat.permissions,
-                until_date=0
-            )
-        else:
-            permissions = ChatPermissions(
-                can_send_messages=True,
-                can_send_audios=True,
-                can_send_documents=True,
-                can_send_photos=True,
-                can_send_videos=True,
-                can_send_video_notes=True,
-                can_send_voice_notes=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_change_info=False,
-                can_invite_users=True,
-                can_pin_messages=False,
-                can_manage_topics=True
-            )
-            await context.bot.restrict_chat_member(
-                chat_id=chat_id,
-                user_id=user_id,
-                permissions=permissions,
-                until_date=0
-            )
+        # IMPORTANT: To fully clear a user from Telegram's "Exceptions" list in
+        # Permissions settings, ALL permission flags must be set to True (not just
+        # the ones matching the group's current defaults). Any single False flag
+        # (even can_pin_messages/can_change_info) keeps an explicit per-user
+        # override on Telegram's side, which is what keeps showing them in that
+        # list even though they're otherwise fully unmuted.
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_audios=True,
+            can_send_documents=True,
+            can_send_photos=True,
+            can_send_videos=True,
+            can_send_video_notes=True,
+            can_send_voice_notes=True,
+            can_send_polls=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+            can_change_info=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+            can_manage_topics=True
+        )
+        await context.bot.restrict_chat_member(
+            chat_id=chat_id,
+            user_id=user_id,
+            permissions=permissions,
+            until_date=0
+        )
     except Exception as e:
         logger.error(f"Error unmuting user immediately: {e}")
 
@@ -662,37 +659,28 @@ async def complete_unmute_after_delay(context: ContextTypes.DEFAULT_TYPE):
     chat_id = job_data['chat_id']
     user_id = job_data['user_id']
     try:
-        chat = await context.bot.get_chat(chat_id)
-        if chat.permissions:
-            await context.bot.restrict_chat_member(
-                chat_id=chat_id,
-                user_id=user_id,
-                permissions=chat.permissions,
-                until_date=0
-            )
-        else:
-            permissions = ChatPermissions(
-                can_send_messages=True,
-                can_send_audios=True,
-                can_send_documents=True,
-                can_send_photos=True,
-                can_send_videos=True,
-                can_send_video_notes=True,
-                can_send_voice_notes=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_change_info=False,
-                can_invite_users=True,
-                can_pin_messages=False,
-                can_manage_topics=True
-            )
-            await context.bot.restrict_chat_member(
-                chat_id=chat_id,
-                user_id=user_id,
-                permissions=permissions,
-                until_date=0
-            )
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_audios=True,
+            can_send_documents=True,
+            can_send_photos=True,
+            can_send_videos=True,
+            can_send_video_notes=True,
+            can_send_voice_notes=True,
+            can_send_polls=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+            can_change_info=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+            can_manage_topics=True
+        )
+        await context.bot.restrict_chat_member(
+            chat_id=chat_id,
+            user_id=user_id,
+            permissions=permissions,
+            until_date=0
+        )
     except Exception as e:
         logger.error(f"Error unmuting user after delay: {e}")
 
