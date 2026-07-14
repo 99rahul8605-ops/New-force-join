@@ -1,4 +1,4 @@
-python-telegram-bot
+python-telegram-bot>=22.3
 pymongo
 Flask
 python-dotenv
